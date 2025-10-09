@@ -69,40 +69,7 @@ def random_endgame_position(max_pieces=MAX_PIECES_DEFAULT):
     # Randomly choose which player's turn it is
     board.turn = random.choice([chess.WHITE, chess.BLACK])
     
-    # Validate the generated position
-    if not is_valid_position(board):
-        # If invalid, try generating again (recursive call with limit)
-        return random_endgame_position(max_pieces)
-    
     return board
-
-def is_valid_position(board):
-    """
-    Validate that the generated position is legal.
-    
-    Args:
-        board (chess.Board): Chess board to validate
-        
-    Returns:
-        bool: True if position is valid, False otherwise
-    """
-    try:
-        # Check if position is legal
-        if not board.is_valid():
-            return False
-            
-        # Check if kings are not in check (basic validation)
-        if board.is_check():
-            return False
-            
-        # Check piece counts are reasonable
-        piece_map = board.piece_map()
-        if len(piece_map) < 2 or len(piece_map) > 6:
-            return False
-            
-        return True
-    except Exception:
-        return False
 
 def validate_tablebase_directory():
     """
@@ -165,6 +132,15 @@ def generate_dataset(out_csv="data/generated_data.csv", n_samples=DEFAULT_SAMPLE
                 # Check for duplicates
                 if fen in seen_positions:
                     duplicate_count += 1
+                    continue
+                
+                # Validate the generated position
+                try:
+                    if not board.is_valid():
+                        skipped_count += 1
+                        continue
+                except Exception:
+                    skipped_count += 1
                     continue
                 
                 num_pieces = len(board.piece_map())

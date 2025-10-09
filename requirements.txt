@@ -1,9 +1,20 @@
-python-chess==1.999
-torch==2.3.0
-torchvision==0.18.0
-pandas==2.2.2
-numpy==1.26.4
-scikit-learn==1.5.1
-matplotlib==3.9.0
-seaborn==0.13.2
-tqdm==4.66.2
+# Core ML libraries
+torch>=2.0.0
+torchvision>=0.15.0
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+
+# Chess library
+python-chess>=1.9.0
+
+# Visualization
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Utilities
+tqdm>=4.60.0
+
+# Optional: For better performance
+# torch-audio>=2.0.0  # Uncomment if using audio features
+# tensorboard>=2.8.0  # Uncomment for training visualization
