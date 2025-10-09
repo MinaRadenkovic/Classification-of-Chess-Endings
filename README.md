@@ -11,6 +11,49 @@ This project implements an intelligent chess endgame classifier that:
 
 The system uses Syzygy tablebase data and implements a multi-task learning approach with CNN+RNN architecture for robust endgame analysis.
 
+## 📋 Project Specification
+
+**Project Title**: Chess Endgame Classification using Computer Intelligence Methods  
+**Author**: Mina Radenković SV76/2022  
+**Course**: Computer Intelligence Fundamentals  
+
+### Problem Definition
+The problem we solve is automatic recognition and classification of chess endgames. Input is a chess position in FEN (Forsyth–Edwards Notation) format, and output is:
+- Classification of endgame type (e.g., "Rook vs Pawn", "King and Pawn vs King", "Two Rooks vs King", "Rook + Bishop vs Rook")
+- Assessment of win/draw probability
+
+This way the system helps players understand what type of endgame is being played and how to approach the position.
+
+### Motivation
+Endgames are one of the most difficult segments of chess to learn. Although theoretical tablebases exist (with completely accurate solutions), they are not user-friendly for players who want explanations and training.
+
+### Practical Applications
+- Help amateurs and club players practice endgames
+- Education in chess schools and online tutorials
+- System can serve for game analysis on platforms like Lichess or Chess.com
+
+### Dataset
+We use Lichess open database (https://database.lichess.org/), which contains millions of games in PGN format.
+Also, there are endgame tablebases (e.g., Syzygy, https://syzygy-tables.info/) with positions and accurate outcomes.
+
+### Methodology
+1. Position extraction → PGN → FEN
+2. Preprocessing and labeling of endgame types
+3. Modeling:
+   - CNN/RNN for chess board representation (as images or 8×8×N matrices)
+   - Endgame type classification
+   - Outcome prediction (win/draw/loss)
+4. Training and evaluation
+5. Interface development – simple tutor (enter FEN position → get endgame class, evaluation and advice)
+
+### Technologies
+- Python
+- scikit-learn and PyTorch (for classification and prediction)
+- python-chess library (https://python-chess.readthedocs.io/) for FEN/PGN work
+- pgn-extract for data extraction
+- pandas, NumPy for data work
+- Matplotlib/Seaborn for visualizations
+
 ## 🚀 Features
 
 ### Core Functionality

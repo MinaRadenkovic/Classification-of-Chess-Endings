@@ -50,7 +50,7 @@ class ChessEndgameEvaluator:
         Returns:
             Dict[str, float]: Metrike evaluacije
         """
-        print("Počinje evaluacija...")
+        print("Starting evaluation...")
         
         all_type_preds = []
         all_type_labels = []
@@ -203,10 +203,10 @@ class ChessEndgameEvaluator:
             type_encoder: Enkoder za tip završnice
         """
         print("\n" + "="*50)
-        print("REZULTATI EVALUACIJE")
+        print("EVALUATION RESULTS")
         print("="*50)
         
-        print(f"\nTIP ZAVRŠNICE:")
+        print(f"\nENDGAME TYPE:")
         print(f"  Accuracy: {metrics['type_accuracy']:.4f}")
         print(f"  F1 (weighted): {metrics['type_f1_weighted']:.4f}")
         print(f"  F1 (macro): {metrics['type_f1_macro']:.4f}")
@@ -215,7 +215,7 @@ class ChessEndgameEvaluator:
         print(f"  Top-3 Accuracy: {metrics['type_top3_accuracy']:.4f}")
         print(f"  Top-5 Accuracy: {metrics['type_top5_accuracy']:.4f}")
         
-        print(f"\nISHOD (WDL):")
+        print(f"\nOUTCOME (WDL):")
         print(f"  Accuracy: {metrics['wdl_accuracy']:.4f}")
         print(f"  F1 (weighted): {metrics['wdl_f1_weighted']:.4f}")
         print(f"  F1 (macro): {metrics['wdl_f1_macro']:.4f}")
@@ -278,7 +278,7 @@ class ChessEndgameEvaluator:
         
         df = pd.DataFrame(data)
         df.to_csv(save_path, index=False)
-        print(f"Predikcije sačuvane u {save_path}")
+        print(f"Predictions saved to {save_path}")
     
     def plot_confusion_matrices(
         self,
@@ -294,7 +294,7 @@ class ChessEndgameEvaluator:
             type_encoder: Enkoder za tip završnice
             save_path: Putanja za čuvanje
         """
-        print("Kreiranje confusion matrica...")
+        print("Creating confusion matrices...")
         
         all_type_preds = []
         all_type_labels = []
@@ -380,7 +380,7 @@ class ChessEndgameEvaluator:
         plt.tight_layout()
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
-        print(f"Confusion matrice sačuvane u {save_path}")
+        print(f"Confusion matrices saved to {save_path}")
     
     def analyze_errors(
         self,
@@ -396,7 +396,7 @@ class ChessEndgameEvaluator:
             type_encoder: Enkoder za tip završnice
             top_k: Broj najčešćih grešaka za prikaz
         """
-        print("Analiza grešaka...")
+        print("Analyzing errors...")
         
         errors = []
         
@@ -430,17 +430,17 @@ class ChessEndgameEvaluator:
         
         # Analiziraj greške
         if errors:
-            print(f"\nUkupno grešaka: {len(errors)}")
+            print(f"\nTotal errors: {len(errors)}")
             
             type_errors = [e for e in errors if e['type_error']]
             wdl_errors = [e for e in errors if e['wdl_error']]
             
-            print(f"Greške u tipu: {len(type_errors)}")
-            print(f"Greške u WDL: {len(wdl_errors)}")
+            print(f"Type errors: {len(type_errors)}")
+            print(f"WDL errors: {len(wdl_errors)}")
             
-            # Najčešće greške u tipu
+            # Most common type errors
             if type_errors and type_encoder is not None:
-                print(f"\nNajčešće greške u tipu:")
+                print(f"\nMost common type errors:")
                 error_pairs = [(e['type_true'], e['type_pred']) for e in type_errors]
                 error_counts = {}
                 for true_label, pred_label in error_pairs:
@@ -451,11 +451,11 @@ class ChessEndgameEvaluator:
                 for (true_label, pred_label), count in sorted_errors[:top_k]:
                     true_str = type_encoder.inverse_transform([true_label])[0]
                     pred_str = type_encoder.inverse_transform([pred_label])[0]
-                    print(f"  {true_str} -> {pred_str}: {count} puta")
+                    print(f"  {true_str} -> {pred_str}: {count} times")
             
-            # Najčešće greške u WDL
+            # Most common WDL errors
             if wdl_errors:
-                print(f"\nNajčešće greške u WDL:")
+                print(f"\nMost common WDL errors:")
                 wdl_error_pairs = [(e['wdl_true'], e['wdl_pred']) for e in wdl_errors]
                 wdl_error_counts = {}
                 for true_label, pred_label in wdl_error_pairs:
@@ -467,12 +467,12 @@ class ChessEndgameEvaluator:
                 for (true_label, pred_label), count in sorted_wdl_errors[:top_k]:
                     true_str = wdl_map[true_label]
                     pred_str = wdl_map[pred_label]
-                    print(f"  {true_str} -> {pred_str}: {count} puta")
+                    print(f"  {true_str} -> {pred_str}: {count} times")
 
 
 # Test funkcija
 if __name__ == "__main__":
-    print("Testiranje evaluator-a...")
+    print("Testing evaluator...")
     
     # Test sa malim dataset-om
     from dataset import create_data_loaders
@@ -519,4 +519,4 @@ if __name__ == "__main__":
         top_k=5
     )
     
-    print("✅ Evaluator radi ispravno!")
+    print("✅ Evaluator works correctly!")

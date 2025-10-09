@@ -249,8 +249,8 @@ class ChessEndgameTrainer:
             save_every: Čuva model svakih N epoha
             early_stopping_patience: Patience za early stopping
         """
-        print(f"Počinje treniranje na {self.device}...")
-        print(f"Broj epoha: {epochs}")
+        print(f"Starting training on {self.device}...")
+        print(f"Number of epochs: {epochs}")
         print(f"Train batches: {len(train_loader)}")
         print(f"Val batches: {len(val_loader)}")
         
@@ -260,7 +260,7 @@ class ChessEndgameTrainer:
         for epoch in range(epochs):
             epoch_start = time.time()
             
-            print(f"\n=== EPOHA {epoch+1}/{epochs} ===")
+            print(f"\n=== EPOCH {epoch+1}/{epochs} ===")
             
             # Treniraj
             train_metrics = self.train_epoch(train_loader)
@@ -295,7 +295,7 @@ class ChessEndgameTrainer:
                 self.best_val_loss = val_metrics['loss']
                 self.best_model_state = self.model.state_dict().copy()
                 best_epoch = epoch
-                print(f"🎉 Novi najbolji model! Val Loss: {val_metrics['loss']:.4f}")
+                print(f"🎉 New best model! Val Loss: {val_metrics['loss']:.4f}")
             
             # Čuva model
             if (epoch + 1) % save_every == 0:
@@ -303,19 +303,19 @@ class ChessEndgameTrainer:
             
             # Early stopping
             if epoch - best_epoch >= early_stopping_patience:
-                print(f"Early stopping na epohi {epoch+1}")
+                print(f"Early stopping at epoch {epoch+1}")
                 break
             
             epoch_time = time.time() - epoch_start
-            print(f"Epoha trajala: {epoch_time:.2f}s")
+            print(f"Epoch duration: {epoch_time:.2f}s")
         
-        # Učitaj najbolji model
+        # Load best model
         if self.best_model_state is not None:
             self.model.load_state_dict(self.best_model_state)
-            print(f"Učitán najbolji model iz epohe {best_epoch+1}")
+            print(f"Loaded best model from epoch {best_epoch+1}")
         
         total_time = time.time() - start_time
-        print(f"\nTreniranje završeno! Ukupno vreme: {total_time:.2f}s")
+        print(f"\nTraining completed! Total time: {total_time:.2f}s")
         
         # Sačuvaj finalni model
         self.save_checkpoint(epochs, val_metrics['loss'], is_final=True)
@@ -348,7 +348,7 @@ class ChessEndgameTrainer:
         
         filepath = os.path.join(self.save_dir, filename)
         torch.save(checkpoint, filepath)
-        print(f"Checkpoint sačuvan: {filepath}")
+        print(f"Checkpoint saved: {filepath}")
     
     def save_history(self):
         """
@@ -357,7 +357,7 @@ class ChessEndgameTrainer:
         filepath = os.path.join(self.save_dir, "training_history.json")
         with open(filepath, 'w') as f:
             json.dump(self.history, f, indent=2)
-        print(f"Historija sačuvana: {filepath}")
+        print(f"History saved: {filepath}")
     
     def plot_history(self):
         """
@@ -414,7 +414,7 @@ class ChessEndgameTrainer:
 
 # Test funkcija
 if __name__ == "__main__":
-    print("Testiranje trainer-a...")
+    print("Testing trainer...")
     
     # Test sa malim dataset-om
     from dataset import create_data_loaders
@@ -456,4 +456,4 @@ if __name__ == "__main__":
     # Prikaži historiju
     trainer.plot_history()
     
-    print("✅ Trainer radi ispravno!")
+    print("✅ Trainer works correctly!")

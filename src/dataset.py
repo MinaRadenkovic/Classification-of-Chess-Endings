@@ -63,7 +63,7 @@ class ChessEndgameDataset(Dataset):
         # Cache for tensors
         self.tensor_cache = {} if cache_tensors else None
         
-        print("Dataset spreman!")
+        print("Dataset ready!")
     
     def _prepare_labels(self):
         """Prepares labels for training."""

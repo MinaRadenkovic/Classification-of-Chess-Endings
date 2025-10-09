@@ -38,10 +38,10 @@ class ChessEndgameInterface:
         # Kreiraj model
         self.model = self._load_model(model_path)
         
-        print(f"Model učitán sa {model_path}")
+        print(f"Model loaded from {model_path}")
         print(f"Device: {device}")
-        print(f"Broj tipova završnica: {self.encoders['num_type_classes']}")
-        print(f"Broj WDL klasa: {self.encoders['num_wdl_classes']}")
+        print(f"Number of endgame types: {self.encoders['num_type_classes']}")
+        print(f"Number of WDL classes: {self.encoders['num_wdl_classes']}")
     
     def _load_encoders(self, encoders_path: str) -> dict:
         """Učitava enkodere."""
@@ -118,15 +118,15 @@ class ChessEndgameInterface:
                 return type_prediction, wdl_prediction, probabilities
                 
         except Exception as e:
-            return f"Greška: {str(e)}", "Greška", {}
+            return f"Error: {str(e)}", "Error", {}
     
     def _wdl_to_string(self, wdl: int) -> str:
-        """Konvertuje WDL u string."""
-        wdl_map = {0: 'Loss (Crni pobeduje)', 1: 'Draw (Remi)', 2: 'Win (Beli pobeduje)'}
-        return wdl_map.get(wdl, 'Nepoznato')
+        """Converts WDL to string."""
+        wdl_map = {0: 'Loss (Black wins)', 1: 'Draw', 2: 'Win (White wins)'}
+        return wdl_map.get(wdl, 'Unknown')
     
     def _get_top5_predictions(self, type_probs: torch.Tensor) -> list:
-        """Vraća top 5 predikcija za tip završnice."""
+        """Returns top 5 predictions for endgame type."""
         top5_probs, top5_indices = torch.topk(type_probs, 5)
         
         results = []
@@ -140,7 +140,7 @@ class ChessEndgameInterface:
         return results
     
     def _get_wdl_probabilities(self, wdl_probs: torch.Tensor) -> dict:
-        """Vraća verovatnoće za WDL."""
+        """Returns probabilities for WDL."""
         return {
             'Loss': wdl_probs[0].item(),
             'Draw': wdl_probs[1].item(),
@@ -150,10 +150,10 @@ class ChessEndgameInterface:
     def interactive_mode(self):
         """Interaktivni režim."""
         print("\n" + "="*60)
-        print("ŠAHOVSKI ENDGAME KLASIFIKATOR")
+        print("CHESS ENDGAME CLASSIFIER")
         print("="*60)
-        print("Unesite FEN poziciju ili 'quit' za izlaz")
-        print("Primer: 4k3/8/8/8/8/8/8/4K3 w - - 0 1")
+        print("Enter FEN position or 'quit' to exit")
+        print("Example: 4k3/8/8/8/8/8/8/4K3 w - - 0 1")
         print("="*60)
         
         while True:
@@ -161,7 +161,7 @@ class ChessEndgameInterface:
                 fen = input("\nFEN: ").strip()
                 
                 if fen.lower() in ['quit', 'exit', 'q']:
-                    print("Doviđenja!")
+                    print("Goodbye!")
                     break
                 
                 if not fen:
@@ -170,31 +170,31 @@ class ChessEndgameInterface:
                 # Predikcija
                 type_pred, wdl_pred, probs = self.predict(fen)
                 
-                # Prikaži rezultate
+                # Show results
                 print(f"\n{'='*40}")
-                print(f"TIP ZAVRŠNICE: {type_pred}")
-                print(f"ISHOD: {wdl_pred}")
+                print(f"ENDGAME TYPE: {type_pred}")
+                print(f"OUTCOME: {wdl_pred}")
                 print(f"{'='*40}")
                 
-                # Top 5 predikcija za tip
+                # Top 5 predictions for type
                 if 'type_top5' in probs:
-                    print("\nTop 5 predikcija za tip:")
+                    print("\nTop 5 predictions for type:")
                     for i, pred in enumerate(probs['type_top5'], 1):
                         print(f"  {i}. {pred['type']}: {pred['probability']:.3f}")
                 
-                # WDL verovatnoće
+                # WDL probabilities
                 if 'wdl_all' in probs:
-                    print(f"\nWDL verovatnoće:")
+                    print(f"\nWDL probabilities:")
                     for outcome, prob in probs['wdl_all'].items():
                         print(f"  {outcome}: {prob:.3f}")
                 
                 print(f"{'='*40}")
                 
             except KeyboardInterrupt:
-                print("\nDoviđenja!")
+                print("\nGoodbye!")
                 break
             except Exception as e:
-                print(f"Greška: {e}")
+                print(f"Error: {e}")
     
     def batch_predict(self, fens: list) -> list:
         """
@@ -209,7 +209,7 @@ class ChessEndgameInterface:
         results = []
         
         for i, fen in enumerate(fens):
-            print(f"Procesiranje {i+1}/{len(fens)}: {fen[:50]}...")
+            print(f"Processing {i+1}/{len(fens)}: {fen[:50]}...")
             type_pred, wdl_pred, probs = self.predict(fen)
             
             results.append({
@@ -232,18 +232,18 @@ class ChessEndgameInterface:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         
-        print(f"Predikcije sačuvane u {output_path}")
+        print(f"Predictions saved to {output_path}")
 
 
 def main():
     """Glavna funkcija."""
-    parser = argparse.ArgumentParser(description='Šahovski Endgame Klasifikator')
-    parser.add_argument('--model', required=True, help='Putanja do modela')
-    parser.add_argument('--encoders', required=True, help='Putanja do enkodera')
+    parser = argparse.ArgumentParser(description='Chess Endgame Classifier')
+    parser.add_argument('--model', required=True, help='Path to model')
+    parser.add_argument('--encoders', required=True, help='Path to encoders')
     parser.add_argument('--device', default='cpu', help='Device (cpu/cuda)')
-    parser.add_argument('--fen', help='FEN pozicija za predikciju')
-    parser.add_argument('--batch', help='Fajl sa FEN pozicijama (jedna po liniji)')
-    parser.add_argument('--output', help='Output fajl za batch predikcije')
+    parser.add_argument('--fen', help='FEN position for prediction')
+    parser.add_argument('--batch', help='File with FEN positions (one per line)')
+    parser.add_argument('--output', help='Output file for batch predictions')
     
     args = parser.parse_args()
     
@@ -259,16 +259,16 @@ def main():
         type_pred, wdl_pred, probs = interface.predict(args.fen)
         
         print(f"FEN: {args.fen}")
-        print(f"Tip završnice: {type_pred}")
-        print(f"Ishod: {wdl_pred}")
+        print(f"Endgame type: {type_pred}")
+        print(f"Outcome: {wdl_pred}")
         
         if 'type_top5' in probs:
-            print("\nTop 5 predikcija:")
+            print("\nTop 5 predictions:")
             for i, pred in enumerate(probs['type_top5'], 1):
                 print(f"  {i}. {pred['type']}: {pred['probability']:.3f}")
         
         if 'wdl_all' in probs:
-            print("\nWDL verovatnoće:")
+            print("\nWDL probabilities:")
             for outcome, prob in probs['wdl_all'].items():
                 print(f"  {outcome}: {prob:.3f}")
     
@@ -285,8 +285,8 @@ def main():
             # Prikaži rezultate
             for result in results:
                 print(f"FEN: {result['fen']}")
-                print(f"Tip: {result['type_prediction']}")
-                print(f"Ishod: {result['wdl_prediction']}")
+                print(f"Type: {result['type_prediction']}")
+                print(f"Prediction: {result['wdl_prediction']}")
                 print("-" * 40)
     
     else:
