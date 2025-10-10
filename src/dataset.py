@@ -110,8 +110,9 @@ class ChessEndgameDataset(Dataset):
             if self.tensor_cache is not None:
                 self.tensor_cache[idx] = tensor
         
-        # Convert to PyTorch tensor
+        # Convert to PyTorch tensor and transpose to (channels, height, width)
         tensor = torch.tensor(tensor, dtype=torch.float32)
+        tensor = tensor.permute(2, 0, 1)  # (height, width, channels) -> (channels, height, width)
         type_label = torch.tensor(self.type_labels[idx], dtype=torch.long)
         wdl_label = torch.tensor(self.wdl_labels[idx], dtype=torch.long)
         
@@ -224,7 +225,7 @@ def create_data_loaders(
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=False  # Disable pin_memory for CPU
     )
     
     val_loader = DataLoader(
@@ -232,7 +233,7 @@ def create_data_loaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=False  # Disable pin_memory for CPU
     )
     
     test_loader = DataLoader(
@@ -240,7 +241,7 @@ def create_data_loaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=False  # Disable pin_memory for CPU
     )
     
     return train_loader, val_loader, test_loader, full_dataset

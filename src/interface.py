@@ -55,7 +55,7 @@ class ChessEndgameInterface:
     def _load_model(self, model_path: str) -> ChessEndgameModel:
         """Učitava model."""
         model = ChessEndgameModel(
-            input_channels=12,
+            input_channels=13,  # 12 + 1 turn channel
             num_type_classes=self.encoders['num_type_classes'],
             num_wdl_classes=self.encoders['num_wdl_classes']
         )
@@ -87,8 +87,10 @@ class ChessEndgameInterface:
             tensor = fen_to_tensor(fen, normalize=True)
             tensor = add_turn_channel(tensor, board.turn)
             
-            # Konvertuj u PyTorch tensor
-            tensor = torch.tensor(tensor, dtype=torch.float32).unsqueeze(0)  # Dodaj batch dim
+            # Konvertuj u PyTorch tensor i transponuj u (channels, height, width)
+            tensor = torch.tensor(tensor, dtype=torch.float32)
+            tensor = tensor.permute(2, 0, 1)  # (height, width, channels) -> (channels, height, width)
+            tensor = tensor.unsqueeze(0)  # Dodaj batch dim: (1, channels, height, width)
             tensor = tensor.to(self.device)
             
             # Predikcija
