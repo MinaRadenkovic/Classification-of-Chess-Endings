@@ -1,6 +1,10 @@
-# Chess Endgame Classification using Deep Learning
+# Chess Endgame Classification with Deep Learning
 
-A comprehensive deep learning system for classifying chess endgame positions and predicting game outcomes using CNN+RNN architecture.
+**Author**: Mina Radenković SV76/2022  
+**Course**: Computer Intelligence Fundamentals  
+**Faculty**: FTN, University of Novi Sad
+
+A comprehensive deep learning system for classifying chess endgames and predicting game outcomes using CNN+RNN architecture.
 
 ## 🎯 Project Overview
 
@@ -54,46 +58,43 @@ Also, there are endgame tablebases (e.g., Syzygy, https://syzygy-tables.info/) w
 - pandas, NumPy for data work
 - Matplotlib/Seaborn for visualizations
 
-## 🚀 Features
+## 🚀 Key Features
 
-### Core Functionality
-- **Endgame Type Classification**: Identifies the specific type of endgame position
-- **Outcome Prediction**: Predicts Win/Draw/Loss with confidence scores
-- **Multi-task Learning**: Simultaneous classification and outcome prediction
-- **Educational Interface**: Interactive CLI for chess players
-
-### Technical Features
+- **Multi-task Learning**: Simultaneous endgame type classification and outcome prediction
 - **CNN+RNN Architecture**: Convolutional layers for spatial features + LSTM for sequential patterns
 - **FEN to Tensor Conversion**: Efficient representation of chess positions
-- **Position Normalization**: Consistent representation regardless of player perspective
-- **Comprehensive Evaluation**: Multiple metrics including accuracy, F1-score, confusion matrices
+- **Comprehensive Evaluation**: Multiple metrics and confusion matrix analysis
+- **Interactive Interface**: Command-line tools for prediction and analysis
+- **Material Balance Normalization**: Optimized dataset
 
 ## 📊 Dataset
 
+### Data Source
 - **Source**: Syzygy endgame tablebase (3-4-5 piece positions)
 - **Size**: ~250,000 unique endgame positions
 - **Format**: FEN strings with tablebase evaluations
 - **Features**: Position, endgame type, WDL outcome, DTZ, piece count, turn information
 
 ### Dataset Statistics
-- **Endgame Types**: 100+ different endgame classifications
+- **Endgame Types**: 196 unique endgame classifications (optimized from 856)
 - **Outcomes**: Balanced distribution of Win/Draw/Loss
 - **Pieces**: 2-6 pieces per position (including kings)
 - **Validation**: All positions validated against Syzygy tablebase
+- **Normalization**: Material balance normalization eliminates duplicates
 
 ## 🏗️ Architecture
 
 ### Model Architecture
 ```
-Input: FEN String → 8×8×12 Tensor
+Input: FEN String → 8×8×13 Tensor
     ↓
 CNN Layers (Spatial Feature Extraction)
     ↓
 RNN Layers (Sequential Pattern Recognition)
     ↓
 Multi-task Output:
-├── Endgame Type Classification
-└── Win/Draw/Loss Prediction
+├── Endgame Type Classification (196 classes)
+└── Win/Draw/Loss Prediction (3 classes)
 ```
 
 ### Key Components
@@ -111,10 +112,9 @@ Multi-task Output:
 
 ### Setup
 ```bash
-
 # Install dependencies
 pip install -r requirements.txt
-
+```
 
 ### Dependencies
 ```txt
@@ -160,22 +160,25 @@ python main.py predict --model-path checkpoints/final_model.pth --encoders-path 
 
 ```
 chess-endgame-classifier/
-├── src/
+├── src/                        # Source code
 │   ├── dataset.py              # PyTorch Dataset implementation
 │   ├── model.py                # CNN+RNN model architecture
 │   ├── train.py                # Training pipeline
 │   ├── evaluate.py             # Model evaluation
-│   ├── interface.py             # CLI interface
+│   ├── interface.py            # CLI interface
 │   ├── fen_to_tensor.py        # FEN to tensor conversion
 │   └── generate data/
 │       ├── generate_dataset.py # Dataset generation
-│       └── classify_type.py    # Endgame type classification
+│       ├── classify_type.py    # Endgame type classification
+│       └── validate_dataset.py # Dataset validation
 ├── data/
-│   ├── generated_data.csv      # Generated dataset
-│   └── syzygy/                 # Syzygy tablebase files
+│   ├── generated_data.csv      # Generated dataset (not in git)
+│   └── syzygy/                 # Syzygy tablebase files (not in git)
+├── checkpoints/                # Model checkpoints (not in git)
 ├── main.py                     # Main entry point
-├── analyze_dataset.py          # Dataset analysis
-├── requirements.txt            # Dependencies
+├── Chess_Endgame_Presentation.ipynb  # Jupyter notebook for presentation
+├── requirements.txt            # Python dependencies
+├── .gitignore                  # Git ignore file
 └── README.md                   # This file
 ```
 
@@ -189,10 +192,12 @@ chess-endgame-classifier/
 - **Optimizer**: Adam with weight decay
 
 ### Model Parameters
-- **Input Channels**: 12 (6 piece types × 2 colors) + optional turn channel
+- **Input Channels**: 13 (12 piece channels + 1 turn channel)
 - **CNN Filters**: 64 → 128 → 256
 - **RNN Hidden Size**: 128 (bidirectional)
 - **Dropout**: 0.2-0.3 for regularization
+- **Type Classes**: 196 (optimized from 856)
+- **WDL Classes**: 3 (Win/Draw/Loss)
 
 ## 📈 Evaluation Metrics
 
@@ -224,9 +229,9 @@ This project serves as an excellent educational resource for:
 
 ### FEN to Tensor Conversion
 - **Input**: FEN string (e.g., "4k3/8/8/8/8/8/8/4K3 w - - 0 1")
-- **Output**: 8×8×12 tensor representing piece positions
+- **Output**: 8×8×13 tensor representing piece positions
 - **Normalization**: Consistent representation regardless of perspective
-- **Turn Information**: Optional additional channel for turn data
+- **Turn Information**: Additional channel for turn data
 
 ### Model Architecture Details
 - **CNN**: 3 convolutional layers with batch normalization and max pooling
@@ -240,7 +245,7 @@ This project serves as an excellent educational resource for:
 - **Web Interface**: Browser-based interactive tool
 - **Mobile App**: Chess training application
 - **Advanced Features**: Move suggestions and tactical analysis
-- **Extended Dataset**: More complex endgame positions
+- **Extended Dataset**: More complex endgame positions (6+ pieces)
 - **Real-time Analysis**: Live game position analysis
 
 ### Research Directions
@@ -248,6 +253,11 @@ This project serves as an excellent educational resource for:
 - **Reinforcement Learning**: Self-play endgame training
 - **Multi-modal Learning**: Combining position and move history
 - **Explainable AI**: Understanding model decision-making
+
+### Recent Optimizations
+- **Material Balance Normalization**: Reduced endgame types from 856 to 196 (77% reduction)
+- **Improved Training Efficiency**: 4x faster learning with optimized dataset
+- **Better Generalization**: Eliminated duplicate endgame classifications
 
 ## 📚 References
 
@@ -271,12 +281,6 @@ python -m pytest tests/
 # Format code
 black src/
 ```
-
-## 👥 Authors
-
-- **Mina Radenković**
-- **Course**: Computer Intelligence
-- **Institution**: FTN, University of Novi Sad
 
 ## 🙏 Acknowledgments
 

@@ -12,7 +12,7 @@ from classify_type import classify_endgame
 # Use os.path to create correct path relative to script location
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-TABLEBASE_DIR = os.path.join(PROJECT_ROOT, "data", "syzygy", "3-4-5")
+TABLEBASE_DIR = os.path.join(PROJECT_ROOT, "..", "data", "syzygy", "3-4-5")
 BOARD_SIZE = 64  # Number of squares on chess board (0-63)
 MAX_PIECES_DEFAULT = 6  # Maximum pieces in endgame position (2 kings and 4 other pieces)
 DEFAULT_SAMPLES = 250000  # Default number of samples to generate
@@ -196,5 +196,5 @@ def generate_dataset(out_csv="data/generated_data.csv", n_samples=DEFAULT_SAMPLE
 if __name__ == "__main__":
     # Generate dataset with default parameters
     # Use os.path to create correct path relative to script location
-    output_path = os.path.join(PROJECT_ROOT, "data", "generated_data.csv")
+    output_path = os.path.join(PROJECT_ROOT, "..", "data", "generated_data.csv")
     generate_dataset(out_csv=output_path, n_samples=DEFAULT_SAMPLES)

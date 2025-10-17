@@ -2,12 +2,13 @@ import chess
 
 def classify_endgame(fen: str) -> str:
     """
-    Classify chess endgame type based on FEN string.
-    Returns endgame type description (e.g., K+P vs K, R vs P, etc.)
+    Classify chess endgame type based on FEN string with material balance normalization.
+    Always returns classification from white's perspective (white has advantage).
+    Returns endgame type description (e.g., K+Q vs K, K+P vs K, etc.)
     Args:
         fen (str): FEN string representing the chess position  
     Returns:
-        str: Endgame type classification
+        str: Normalized endgame type classification
     """
     board = chess.Board(fen)
     pieces = board.piece_map().values()
@@ -37,6 +38,88 @@ def classify_endgame(fen: str) -> str:
                 material.append(f"{count if count > 1 else ''}{piece_type}")
         return "+".join(material) if material else "K"
 
+    def calculate_material_value(counts: dict) -> int:
+        """Calculate material value for position normalization."""
+        values = {"Q": 9, "R": 5, "B": 3, "N": 3, "P": 1, "q": 9, "r": 5, "b": 3, "n": 3, "p": 1}
+        total = 0
+        for piece_type, count in counts.items():
+            if piece_type != "K" and piece_type != "k":
+                total += count * values.get(piece_type, 0)
+        return total
+
+    def normalize_material_balance(white_counts, black_counts):
+        """
+        Normalize material balance so that white always has advantage or equal.
+        Returns normalized (white_material, black_material) tuple.
+        """
+        white_value = calculate_material_value(white_counts)
+        black_value = calculate_material_value(black_counts)
+        
+        # If black has advantage, swap the materials
+        if black_value > white_value:
+            # Swap: what was black material becomes white material
+            white_material = material_string({k.lower(): v for k, v in black_counts.items()})
+            black_material = material_string(white_counts)
+        else:
+            # Keep original (white has advantage or equal)
+            white_material = material_string(white_counts)
+            black_material = material_string({k.lower(): v for k, v in black_counts.items()})
+        
+        return white_material, black_material
+
+    def create_canonical_type(white_material, black_material):
+        """
+        Create canonical endgame type by normalizing material balance.
+        This ensures that "Q vs k" and "K+Q vs K" become the same type.
+        """
+        def extract_pieces(material_str):
+            """Extract non-king pieces from material string."""
+            pieces = []
+            for char in material_str:
+                if char.upper() in ['Q', 'R', 'B', 'N', 'P']:
+                    pieces.append(char.upper())
+            return sorted(pieces)
+        
+        def create_material_signature(pieces):
+            """Create a signature for the material balance."""
+            if not pieces:
+                return "K"
+            
+            # Count pieces
+            counts = {}
+            for piece in pieces:
+                counts[piece] = counts.get(piece, 0) + 1
+            
+            # Create signature
+            signature = []
+            for piece in ['Q', 'R', 'B', 'N', 'P']:
+                if piece in counts:
+                    count = counts[piece]
+                    if count > 1:
+                        signature.append(f"{count}{piece}")
+                    else:
+                        signature.append(piece)
+            
+            return "+".join(signature) if signature else "K"
+        
+        # Extract pieces from both sides
+        white_pieces = extract_pieces(white_material)
+        black_pieces = extract_pieces(black_material)
+        
+        # Create signatures
+        white_sig = create_material_signature(white_pieces)
+        black_sig = create_material_signature(black_pieces)
+        
+        # Create both possible orderings
+        type1 = f"{white_sig} vs {black_sig}"
+        type2 = f"{black_sig} vs {white_sig}"
+        
+        # Return the lexicographically smaller one for consistency
+        return type1 if type1 < type2 else type2
+
+    # Create material strings
     white_material = material_string(white_counts)
     black_material = material_string({k.lower(): v for k, v in black_counts.items()})
-    return f"{white_material} vs {black_material}"
+    
+    # Create canonical type to ensure consistency
+    return create_canonical_type(white_material, black_material)
