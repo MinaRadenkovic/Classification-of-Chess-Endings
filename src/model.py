@@ -58,7 +58,7 @@ class ChessEndgameCNN(nn.Module):
 
 class ChessEndgameRNN(nn.Module):
     """
-    RNN part for processing sequential features.
+    RNN part with attention mechanism for processing sequential features.
     """
     
     def __init__(self, input_size: int = 256, hidden_size: int = 128, num_layers: int = 2):
@@ -79,6 +79,14 @@ class ChessEndgameRNN(nn.Module):
         
         # Output size is 2 * hidden_size due to bidirectional
         self.output_size = 2 * hidden_size
+
+        # Multihead Attention
+        self.attention = nn.MultiheadAttention(
+            embed_dim=2 * hidden_size,  # because it's bidirectional
+            num_heads=4,
+            batch_first=True,
+            dropout=0.1
+        )
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -89,10 +97,19 @@ class ChessEndgameRNN(nn.Module):
             torch.Tensor: Output (batch_size, output_size)
         """
         # LSTM forward pass
-        lstm_out, (hidden, cell) = self.lstm(x)
+        lstm_out, _ = self.lstm(x)
         
         # Take last output
-        output = lstm_out[:, -1, :]  # (batch_size, output_size)
+        # output = lstm_out[:, -1, :]  # (batch_size, output_size)
+
+        # Self-attention (Q=K=V)
+        attn_output, _ = self.attention(lstm_out, lstm_out, lstm_out)
+
+        # Residual connection
+        attn_output = attn_output + lstm_out
+
+        # Global average pooling preko sekvence
+        output = attn_output.mean(dim=1)
         
         return output
 
@@ -273,63 +290,3 @@ def create_model(
     model = model.to(device)
     
     return model, loss_fn
-
-
-# Test function
-if __name__ == "__main__":
-    print("Testing model...")
-    
-    # Test with small batch
-    batch_size = 4
-    input_channels = 12
-    
-    # Create model
-    model, loss_fn = create_model(
-        num_type_classes=50,
-        num_wdl_classes=3,
-        input_channels=input_channels
-    )
-    
-    print(f"Model created:")
-    print(f"  Input channels: {input_channels}")
-    print(f"  Type classes: 50")
-    print(f"  WDL classes: 3")
-    
-    # Test forward pass
-    x = torch.randn(batch_size, input_channels, 8, 8)
-    type_logits, wdl_logits = model(x)
-    
-    print(f"\nForward pass:")
-    print(f"  Input shape: {x.shape}")
-    print(f"  Type logits shape: {type_logits.shape}")
-    print(f"  WDL logits shape: {wdl_logits.shape}")
-    
-    # Test loss
-    type_labels = torch.randint(0, 50, (batch_size,))
-    wdl_labels = torch.randint(0, 3, (batch_size,))
-    
-    total_loss, type_loss, wdl_loss = loss_fn(type_logits, wdl_logits, type_labels, wdl_labels)
-    
-    print(f"\nLoss:")
-    print(f"  Total loss: {total_loss.item():.4f}")
-    print(f"  Type loss: {type_loss.item():.4f}")
-    print(f"  WDL loss: {wdl_loss.item():.4f}")
-    
-    # Test predictions
-    type_probs, wdl_probs = model.predict(x)
-    
-    print(f"\nPredictions:")
-    print(f"  Type probs shape: {type_probs.shape}")
-    print(f"  WDL probs shape: {wdl_probs.shape}")
-    print(f"  Type probs sum: {type_probs.sum(dim=1)}")
-    print(f"  WDL probs sum: {wdl_probs.sum(dim=1)}")
-    
-    # Number of parameters
-    total_params = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    
-    print(f"\nParameters:")
-    print(f"  Total: {total_params:,}")
-    print(f"  Trainable: {trainable_params:,}")
-    
-    print("✅ Model works correctly!")

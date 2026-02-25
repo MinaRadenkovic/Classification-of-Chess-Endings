@@ -1,27 +1,24 @@
 """
-Training pipeline za šahovski endgame model.
+Training pipeline for chess endgame model.
 """
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, f1_score, classification_report
+from sklearn.metrics import accuracy_score, f1_score
 import time
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict
 import json
 from tqdm import tqdm
 
 from model import ChessEndgameModel, ChessEndgameLoss
-from dataset import ChessEndgameDataset
 
 
 class ChessEndgameTrainer:
     """
-    Trainer klasa za šahovski endgame model.
+    Trainer class for chess endgame model.
     """
     
     def __init__(
@@ -36,10 +33,10 @@ class ChessEndgameTrainer:
         self.device = device
         self.save_dir = save_dir
         
-        # Kreiraj direktorijum za čuvanje
+        # Create directorium for saving
         os.makedirs(save_dir, exist_ok=True)
         
-        # Optimizator
+        # Optimizer
         self.optimizer = optim.Adam(
             model.parameters(),
             lr=0.001,
@@ -54,7 +51,7 @@ class ChessEndgameTrainer:
             patience=5
         )
         
-        # Historija
+        # Training history
         self.history = {
             'train_loss': [],
             'val_loss': [],
@@ -68,19 +65,19 @@ class ChessEndgameTrainer:
             'val_wdl_f1': []
         }
         
-        # Najbolji model
+        # Best model tracking
         self.best_val_loss = float('inf')
         self.best_model_state = None
     
     def train_epoch(self, train_loader: DataLoader) -> Dict[str, float]:
         """
-        Trenira jednu epohu.
+        Trains one epoch.
         
         Args:
-            train_loader: DataLoader za trening
+            train_loader: DataLoader for training
         
         Returns:
-            Dict[str, float]: Metrike za epohu
+            Dict[str, float]: Metrics for the epoch
         """
         self.model.train()
         
@@ -95,8 +92,8 @@ class ChessEndgameTrainer:
         
         pbar = tqdm(train_loader, desc="Training")
         
-        for batch_idx, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(pbar):
-            # Premesti na device
+        for _, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(pbar):
+            # Move dat to device
             tensors = tensors.to(self.device)
             type_labels_batch = type_labels_batch.to(self.device)
             wdl_labels_batch = wdl_labels_batch.to(self.device)
@@ -114,12 +111,12 @@ class ChessEndgameTrainer:
             loss.backward()
             self.optimizer.step()
             
-            # Akumuliraj loss
+            # Acumulate loss
             total_loss += loss.item()
             total_type_loss += type_loss.item()
             total_wdl_loss += wdl_loss.item()
             
-            # Akumuliraj predikcije
+            # Acumulate predictions
             type_preds.extend(type_logits.argmax(dim=1).cpu().numpy())
             type_labels.extend(type_labels_batch.cpu().numpy())
             wdl_preds.extend(wdl_logits.argmax(dim=1).cpu().numpy())
@@ -132,7 +129,7 @@ class ChessEndgameTrainer:
                 'WDL': f'{wdl_loss.item():.4f}'
             })
         
-        # Izračunaj metrike
+        # Calculate metrics
         avg_loss = total_loss / len(train_loader)
         avg_type_loss = total_type_loss / len(train_loader)
         avg_wdl_loss = total_wdl_loss / len(train_loader)
@@ -155,13 +152,13 @@ class ChessEndgameTrainer:
     
     def validate_epoch(self, val_loader: DataLoader) -> Dict[str, float]:
         """
-        Validira jednu epohu.
+        Validates one epoch.
         
         Args:
-            val_loader: DataLoader za validaciju
+            val_loader: DataLoader for validation
         
         Returns:
-            Dict[str, float]: Metrike za epohu
+            Dict[str, float]: Metrics for the epoch
         """
         self.model.eval()
         
@@ -177,8 +174,8 @@ class ChessEndgameTrainer:
         with torch.no_grad():
             pbar = tqdm(val_loader, desc="Validation")
             
-            for batch_idx, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(pbar):
-                # Premesti na device
+            for _, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(pbar):
+                # Move to device
                 tensors = tensors.to(self.device)
                 type_labels_batch = type_labels_batch.to(self.device)
                 wdl_labels_batch = wdl_labels_batch.to(self.device)
@@ -191,12 +188,12 @@ class ChessEndgameTrainer:
                     type_logits, wdl_logits, type_labels_batch, wdl_labels_batch
                 )
                 
-                # Akumuliraj loss
+                # Acumulate loss
                 total_loss += loss.item()
                 total_type_loss += type_loss.item()
                 total_wdl_loss += wdl_loss.item()
                 
-                # Akumuliraj predikcije
+                # Acumulate predikcije
                 type_preds.extend(type_logits.argmax(dim=1).cpu().numpy())
                 type_labels.extend(type_labels_batch.cpu().numpy())
                 wdl_preds.extend(wdl_logits.argmax(dim=1).cpu().numpy())
@@ -209,7 +206,7 @@ class ChessEndgameTrainer:
                     'WDL': f'{wdl_loss.item():.4f}'
                 })
         
-        # Izračunaj metrike
+        # Calculate metrics
         avg_loss = total_loss / len(val_loader)
         avg_type_loss = total_type_loss / len(val_loader)
         avg_wdl_loss = total_wdl_loss / len(val_loader)
@@ -239,14 +236,14 @@ class ChessEndgameTrainer:
         early_stopping_patience: int = 10
     ):
         """
-        Glavna training funkcija.
+        Main trainig function.
         
         Args:
-            train_loader: DataLoader za trening
-            val_loader: DataLoader za validaciju
-            epochs: Broj epoha
-            save_every: Čuva model svakih N epoha
-            early_stopping_patience: Patience za early stopping
+            train_loader: DataLoader for training
+            val_loader: DataLoader for validation
+            epochs: Number of epochs
+            save_every: Saves model every N epochs
+            early_stopping_patience: Patience for early stopping
         """
         print(f"Starting training on {self.device}...")
         print(f"Number of epochs: {epochs}")
@@ -261,16 +258,16 @@ class ChessEndgameTrainer:
             
             print(f"\n=== EPOCH {epoch+1}/{epochs} ===")
             
-            # Treniraj
+            # Train
             train_metrics = self.train_epoch(train_loader)
             
-            # Validiraj
+            # Validate
             val_metrics = self.validate_epoch(val_loader)
             
             # Update scheduler
             self.scheduler.step(val_metrics['loss'])
             
-            # Sačuvaj u historiju
+            # Save in history
             self.history['train_loss'].append(train_metrics['loss'])
             self.history['val_loss'].append(val_metrics['loss'])
             self.history['train_type_acc'].append(train_metrics['type_acc'])
@@ -282,21 +279,21 @@ class ChessEndgameTrainer:
             self.history['train_wdl_f1'].append(train_metrics['wdl_f1'])
             self.history['val_wdl_f1'].append(val_metrics['wdl_f1'])
             
-            # Prikaži metrike
+            # Show metrics
             print(f"Train Loss: {train_metrics['loss']:.4f} | Val Loss: {val_metrics['loss']:.4f}")
             print(f"Train Type Acc: {train_metrics['type_acc']:.4f} | Val Type Acc: {val_metrics['type_acc']:.4f}")
             print(f"Train WDL Acc: {train_metrics['wdl_acc']:.4f} | Val WDL Acc: {val_metrics['wdl_acc']:.4f}")
             print(f"Train Type F1: {train_metrics['type_f1']:.4f} | Val Type F1: {val_metrics['type_f1']:.4f}")
             print(f"Train WDL F1: {train_metrics['wdl_f1']:.4f} | Val WDL F1: {val_metrics['wdl_f1']:.4f}")
             
-            # Proveri da li je najbolji model
+            # Check for best model
             if val_metrics['loss'] < self.best_val_loss:
                 self.best_val_loss = val_metrics['loss']
                 self.best_model_state = self.model.state_dict().copy()
                 best_epoch = epoch
-                print(f"🎉 New best model! Val Loss: {val_metrics['loss']:.4f}")
+                print(f"New best model! Val Loss: {val_metrics['loss']:.4f}")
             
-            # Čuva model
+            # Save model
             if (epoch + 1) % save_every == 0:
                 self.save_checkpoint(epoch + 1, val_metrics['loss'])
             
@@ -316,20 +313,20 @@ class ChessEndgameTrainer:
         total_time = time.time() - start_time
         print(f"\nTraining completed! Total time: {total_time:.2f}s")
         
-        # Sačuvaj finalni model
+        # Save final model
         self.save_checkpoint(epochs, val_metrics['loss'], is_final=True)
         
-        # Sačuvaj historiju
+        # Save history
         self.save_history()
     
     def save_checkpoint(self, epoch: int, val_loss: float, is_final: bool = False):
         """
-        Čuva checkpoint modela.
+        Saves model checkpoint.
         
         Args:
-            epoch: Broj epohe
+            epoch: Number of epoch
             val_loss: Validation loss
-            is_final: Da li je finalni model
+            is_final: Is it final model
         """
         checkpoint = {
             'epoch': epoch,
@@ -351,7 +348,7 @@ class ChessEndgameTrainer:
     
     def save_history(self):
         """
-        Čuva historiju treniranja.
+        Save trainig history to JSON.
         """
         filepath = os.path.join(self.save_dir, "training_history.json")
         with open(filepath, 'w') as f:
@@ -360,7 +357,7 @@ class ChessEndgameTrainer:
     
     def plot_history(self):
         """
-        Prikazuje grafike historije treniranja.
+        Show graphics of treining history.
         """
         fig, axes = plt.subplots(2, 3, figsize=(15, 10))
         fig.suptitle('Training History')
@@ -409,50 +406,3 @@ class ChessEndgameTrainer:
         plt.tight_layout()
         plt.savefig(os.path.join(self.save_dir, 'training_history.png'))
         plt.show()
-
-
-# Test funkcija
-if __name__ == "__main__":
-    print("Testing trainer...")
-    
-    # Test sa malim dataset-om
-    from dataset import create_data_loaders
-    
-    # Kreiraj DataLoadere
-    train_loader, val_loader, test_loader, dataset = create_data_loaders(
-        csv_path="data/generated_data.csv",
-        batch_size=16,
-        max_samples=1000,  # Test sa malim brojem
-        num_workers=0
-    )
-    
-    # Kreiraj model
-    from model import create_model
-    
-    model, loss_fn = create_model(
-        num_type_classes=len(dataset.type_encoder.classes_),
-        num_wdl_classes=3,
-        input_channels=12,
-        device="cpu"
-    )
-    
-    # Kreiraj trainer
-    trainer = ChessEndgameTrainer(
-        model=model,
-        loss_fn=loss_fn,
-        device="cpu",
-        save_dir="test_checkpoints"
-    )
-    
-    # Treniraj
-    trainer.train(
-        train_loader=train_loader,
-        val_loader=val_loader,
-        epochs=5,  # Test sa malim brojem epoha
-        save_every=2
-    )
-    
-    # Prikaži historiju
-    trainer.plot_history()
-    
-    print("✅ Trainer works correctly!")

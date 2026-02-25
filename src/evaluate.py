@@ -9,16 +9,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import (
-    accuracy_score, f1_score, classification_report, 
+    accuracy_score, f1_score, 
     confusion_matrix, precision_recall_fscore_support
 )
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 import pandas as pd
-import os
-import json
 
 from model import ChessEndgameModel, ChessEndgameLoss
-from dataset import ChessEndgameDataset
 
 
 class ChessEndgameEvaluator:

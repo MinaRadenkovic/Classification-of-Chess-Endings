@@ -8,12 +8,10 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional
 import pickle
-import os
 
-from fen_to_tensor import fen_to_tensor, add_turn_channel
-
+from fen_to_tensor import fen_to_tensor, add_turn_channel 
 
 class ChessEndgameDataset(Dataset):
     """
@@ -80,7 +78,7 @@ class ChessEndgameDataset(Dataset):
         print(f"Number of endgame types: {len(self.type_encoder.classes_)}")
         print(f"Types: {self.type_encoder.classes_[:10]}...")
         print(f"WDL distribution: {np.bincount(self.wdl_labels)}")
-    
+
     def __len__(self) -> int:
         return len(self.df)
     
@@ -118,25 +116,6 @@ class ChessEndgameDataset(Dataset):
         
         return tensor, type_label, wdl_label
     
-    def get_class_weights(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Returns class weights for balanced loss.
-        
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor]: Weights for type and wdl classes
-        """
-        # Weights for endgame type
-        type_counts = np.bincount(self.type_labels)
-        type_weights = 1.0 / type_counts
-        type_weights = type_weights / type_weights.sum() * len(type_weights)
-        
-        # Weights for WDL
-        wdl_counts = np.bincount(self.wdl_labels)
-        wdl_weights = 1.0 / wdl_counts
-        wdl_weights = wdl_weights / wdl_weights.sum() * len(wdl_weights)
-        
-        return torch.tensor(type_weights, dtype=torch.float32), torch.tensor(wdl_weights, dtype=torch.float32)
-    
     def save_encoders(self, save_path: str):
         """Saves encoders for later use."""
         encoders = {
@@ -150,15 +129,6 @@ class ChessEndgameDataset(Dataset):
             pickle.dump(encoders, f)
         
         print(f"Encoders saved to {save_path}")
-    
-    @classmethod
-    def load_encoders(cls, load_path: str) -> Dict[str, Any]:
-        """Loads encoders."""
-        with open(load_path, 'rb') as f:
-            encoders = pickle.load(f)
-        
-        print(f"Encoders loaded from {load_path}")
-        return encoders
 
 
 def create_data_loaders(
@@ -166,7 +136,7 @@ def create_data_loaders(
     batch_size: int = 32,
     train_ratio: float = 0.7,
     val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
+    # test_ratio: float = 0.15
     max_samples: Optional[int] = None,
     normalize: bool = True,
     add_turn_channel: bool = True,
@@ -181,7 +151,6 @@ def create_data_loaders(
         batch_size (int): Batch size
         train_ratio (float): Percentage for training
         val_ratio (float): Percentage for validation
-        test_ratio (float): Percentage for testing
         max_samples (int, optional): Maximum number of samples
         normalize (bool): Whether to normalize positions
         add_turn_channel (bool): Whether to add turn channel
@@ -203,7 +172,6 @@ def create_data_loaders(
     # Split into train/val/test
     train_size = int(len(full_dataset) * train_ratio)
     val_size = int(len(full_dataset) * val_ratio)
-    test_size = len(full_dataset) - train_size - val_size
     
     train_dataset, temp_dataset = train_test_split(
         full_dataset, 
@@ -245,37 +213,3 @@ def create_data_loaders(
     )
     
     return train_loader, val_loader, test_loader, full_dataset
-
-
-# Test function
-if __name__ == "__main__":
-    # Test with small dataset
-    csv_path = "data/generated_data.csv"
-    
-    print("Creating DataLoaders...")
-    train_loader, val_loader, test_loader, dataset = create_data_loaders(
-        csv_path=csv_path,
-        batch_size=16,
-        max_samples=1000,  # Test with small number
-        num_workers=0  # For Windows
-    )
-    
-    # Test batch
-    print("\nTest batch:")
-    for batch_idx, (tensors, type_labels, wdl_labels) in enumerate(train_loader):
-        print(f"Batch {batch_idx}:")
-        print(f"  Tensor shape: {tensors.shape}")
-        print(f"  Type labels shape: {type_labels.shape}")
-        print(f"  WDL labels shape: {wdl_labels.shape}")
-        print(f"  Type labels: {type_labels[:5]}")
-        print(f"  WDL labels: {wdl_labels[:5]}")
-        
-        if batch_idx >= 2:  # Only first 3 batches
-            break
-    
-    # Test class weights
-    type_weights, wdl_weights = dataset.get_class_weights()
-    print(f"\nType weights shape: {type_weights.shape}")
-    print(f"WDL weights shape: {wdl_weights.shape}")
-    
-    print("✅ Dataset class works correctly!")

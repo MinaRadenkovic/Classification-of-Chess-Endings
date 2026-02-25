@@ -6,14 +6,13 @@ import torch
 import argparse
 import sys
 import os
-from typing import Optional, Tuple
+from typing import Tuple
 import json
 
 # Dodaj src u path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from model import ChessEndgameModel, ChessEndgameLoss
-from dataset import ChessEndgameDataset
+from model import ChessEndgameModel
 from fen_to_tensor import fen_to_tensor, add_turn_channel
 import chess
 

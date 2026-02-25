@@ -26,7 +26,7 @@ def train_model(args):
         batch_size=args.batch_size,
         train_ratio=args.train_ratio,
         val_ratio=args.val_ratio,
-        test_ratio=args.test_ratio,
+        # test_ratio=args.test_ratio,
         max_samples=args.max_samples,
         normalize=args.normalize,
         add_turn_channel=args.add_turn_channel,
