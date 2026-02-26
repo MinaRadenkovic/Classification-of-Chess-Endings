@@ -38,35 +38,6 @@ def classify_endgame(fen: str) -> str:
                 material.append(f"{count if count > 1 else ''}{piece_type}")
         return "+".join(material) if material else "K"
 
-    def calculate_material_value(counts: dict) -> int:
-        """Calculate material value for position normalization."""
-        values = {"Q": 9, "R": 5, "B": 3, "N": 3, "P": 1, "q": 9, "r": 5, "b": 3, "n": 3, "p": 1}
-        total = 0
-        for piece_type, count in counts.items():
-            if piece_type != "K" and piece_type != "k":
-                total += count * values.get(piece_type, 0)
-        return total
-
-    def normalize_material_balance(white_counts, black_counts):
-        """
-        Normalize material balance so that white always has advantage or equal.
-        Returns normalized (white_material, black_material) tuple.
-        """
-        white_value = calculate_material_value(white_counts)
-        black_value = calculate_material_value(black_counts)
-        
-        # If black has advantage, swap the materials
-        if black_value > white_value:
-            # Swap: what was black material becomes white material
-            white_material = material_string({k.lower(): v for k, v in black_counts.items()})
-            black_material = material_string(white_counts)
-        else:
-            # Keep original (white has advantage or equal)
-            white_material = material_string(white_counts)
-            black_material = material_string({k.lower(): v for k, v in black_counts.items()})
-        
-        return white_material, black_material
-
     def create_canonical_type(white_material, black_material):
         """
         Create canonical endgame type by normalizing material balance.
@@ -122,4 +93,5 @@ def classify_endgame(fen: str) -> str:
     black_material = material_string({k.lower(): v for k, v in black_counts.items()})
     
     # Create canonical type to ensure consistency
+    # A single, standardized shape, regardless of the arrangement of colors or order of figures
     return create_canonical_type(white_material, black_material)

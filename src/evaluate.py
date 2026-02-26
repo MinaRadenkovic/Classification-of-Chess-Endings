@@ -1,29 +1,25 @@
 """
-Evaluacija modela za šahovske završnice.
+Evaluation of chess endgame model.
 """
 
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import (
-    accuracy_score, f1_score, classification_report, 
+    accuracy_score, f1_score, 
     confusion_matrix, precision_recall_fscore_support
 )
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 import pandas as pd
-import os
-import json
 
-from model import ChessEndgameModel, ChessEndgameLoss
-from dataset import ChessEndgameDataset
+from model import ChessEndgameModel
 
 
 class ChessEndgameEvaluator:
     """
-    Evaluator klasa za šahovski endgame model.
+    Evaluator class for chess endgame model.
     """
     
     def __init__(self, model: ChessEndgameModel, device: str = "cpu"):
@@ -39,16 +35,16 @@ class ChessEndgameEvaluator:
         save_path: str = "predictions.csv"
     ) -> Dict[str, float]:
         """
-        Evaluacija modela na dataset-u.
+        Evaluation of the model on the dataset.
         
         Args:
-            data_loader: DataLoader za evaluaciju
-            type_encoder: Enkoder za tip završnice
-            save_predictions: Da li da čuva predikcije
-            save_path: Putanja za čuvanje predikcija
+            data_loader: DataLoader for evaluation
+            type_encoder: Encoder for endgame types
+            save_predictions: Whether to save predictions
+            save_path: Path to save predictions
         
         Returns:
-            Dict[str, float]: Metrike evaluacije
+            Dict[str, float]: Evaluation metrics
         """
         print("Starting evaluation...")
         
@@ -62,7 +58,7 @@ class ChessEndgameEvaluator:
         
         with torch.no_grad():
             for batch_idx, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(data_loader):
-                # Premesti na device
+                # Move to device
                 tensors = tensors.to(self.device)
                 type_labels_batch = type_labels_batch.to(self.device)
                 wdl_labels_batch = wdl_labels_batch.to(self.device)
@@ -70,15 +66,15 @@ class ChessEndgameEvaluator:
                 # Forward pass
                 type_logits, wdl_logits = self.model(tensors)
                 
-                # Softmax za verovatnoće
+                # Softmax for probabilities
                 type_probs = torch.softmax(type_logits, dim=1)
                 wdl_probs = torch.softmax(wdl_logits, dim=1)
                 
-                # Predikcije
+                # Predictions
                 type_preds = type_logits.argmax(dim=1)
                 wdl_preds = wdl_logits.argmax(dim=1)
                 
-                # Sačuvaj rezultate
+                # Save results
                 all_type_preds.extend(type_preds.cpu().numpy())
                 all_type_labels.extend(type_labels_batch.cpu().numpy())
                 all_wdl_preds.extend(wdl_preds.cpu().numpy())
@@ -86,14 +82,14 @@ class ChessEndgameEvaluator:
                 all_type_probs.extend(type_probs.cpu().numpy())
                 all_wdl_probs.extend(wdl_probs.cpu().numpy())
                 
-                # Sačuvaj FEN stringove (ako su dostupni)
+                # Save FEN strings if available
                 if hasattr(data_loader.dataset, 'df'):
                     batch_start = batch_idx * data_loader.batch_size
                     batch_end = min(batch_start + data_loader.batch_size, len(data_loader.dataset))
                     batch_fens = data_loader.dataset.df.iloc[batch_start:batch_end]['fen'].tolist()
                     all_fens.extend(batch_fens)
         
-        # Konvertuj u numpy arrays
+        # Convert to numpy arrays
         all_type_preds = np.array(all_type_preds)
         all_type_labels = np.array(all_type_labels)
         all_wdl_preds = np.array(all_wdl_preds)
@@ -101,16 +97,16 @@ class ChessEndgameEvaluator:
         all_type_probs = np.array(all_type_probs)
         all_wdl_probs = np.array(all_wdl_probs)
         
-        # Izračunaj metrike
+        # calculate metrics
         metrics = self._calculate_metrics(
             all_type_preds, all_type_labels,
             all_wdl_preds, all_wdl_labels
         )
         
-        # Prikaži rezultate
+        # show results
         self._print_results(metrics, type_encoder)
         
-        # Sačuvaj predikcije ako je traženo
+        # save predictions if needed
         if save_predictions:
             self._save_predictions(
                 all_fens, all_type_preds, all_type_labels, all_wdl_preds, all_wdl_labels,
@@ -127,16 +123,17 @@ class ChessEndgameEvaluator:
         wdl_labels: np.ndarray
     ) -> Dict[str, float]:
         """
-        Izračunava metrike evaluacije.
+        Calculates evaluation metrics.
         
         Args:
-            type_preds: Predikcije za tip završnice
-            type_labels: True labele za tip
-            wdl_preds: Predikcije za WDL
-            wdl_labels: True labele za WDL
+            type_preds: Predictions for endgame type
+            type_labels: True labels for endgame type
+            wdl_preds: Predictions for WDL
+
+            wdl_labels: True labels for WDL
         
         Returns:
-            Dict[str, float]: Metrike
+            Dict[str, float]: Evaluation metrics
         """
         # Accuracy
         type_acc = accuracy_score(type_labels, type_preds)
@@ -154,7 +151,7 @@ class ChessEndgameEvaluator:
             wdl_labels, wdl_preds, average='macro'
         )
         
-        # Top-k accuracy za tip
+        # Top-k accuracy for type
         type_top3_acc = self._calculate_top_k_accuracy(type_labels, type_preds, k=3)
         type_top5_acc = self._calculate_top_k_accuracy(type_labels, type_preds, k=5)
         
@@ -180,27 +177,26 @@ class ChessEndgameEvaluator:
         k: int = 3
     ) -> float:
         """
-        Izračunava top-k accuracy.
+        Calculates top-k accuracy.
         
         Args:
-            labels: True labele
-            preds: Predikcije
-            k: Broj top predikcija
+            labels: True labels
+            preds: Predictions
+            k: Number of top predictions to consider
         
         Returns:
             float: Top-k accuracy
         """
-        # Ovo je pojednostavljeno - u realnosti bi trebalo da imamo verovatnoće
-        # Za sada vraćamo običnu accuracy
+        # Return basic accuracy
         return accuracy_score(labels, preds)
     
     def _print_results(self, metrics: Dict[str, float], type_encoder: Optional[object] = None):
         """
-        Prikazuje rezultate evaluacije.
+        Prints evaluation results.
         
         Args:
-            metrics: Metrike evaluacije
-            type_encoder: Enkoder za tip završnice
+            metrics: Evaluation metrics
+            type_encoder: Encoder for endgame type
         """
         print("\n" + "="*50)
         print("EVALUATION RESULTS")
@@ -237,20 +233,20 @@ class ChessEndgameEvaluator:
         save_path: str = "predictions.csv"
     ):
         """
-        Čuva predikcije u CSV fajl.
+        Saves predictions to a CSV file.
         
         Args:
-            fens: FEN stringovi
-            type_preds: Predikcije za tip
-            type_labels: True labele za tip
-            wdl_preds: Predikcije za WDL
-            wdl_labels: True labele za WDL
-            type_probs: Verovatnoće za tip
-            wdl_probs: Verovatnoće za WDL
-            type_encoder: Enkoder za tip završnice
-            save_path: Putanja za čuvanje
+            fens: FEN strings
+            type_preds: Predictions for endgame type
+            type_labels: True labels for endgame type
+            wdl_preds: Predictions for WDL
+            wdl_labels: True labels for WDL
+            type_probs: Probabilities for endgame type
+            wdl_probs: Probabilities for WDL
+            type_encoder: Encoder for endgame type
+            save_path: Path to save the CSV file
         """
-        # Kreiraj DataFrame
+        # Create DataFrame
         data = {
             'fen': fens,
             'type_pred': type_preds,
@@ -259,19 +255,19 @@ class ChessEndgameEvaluator:
             'wdl_true': wdl_labels
         }
         
-        # Dodaj verovatnoće
+        # Add probabilities
         for i in range(type_probs.shape[1]):
             data[f'type_prob_{i}'] = type_probs[:, i]
         
         for i in range(wdl_probs.shape[1]):
             data[f'wdl_prob_{i}'] = wdl_probs[:, i]
         
-        # Dodaj string predikcije ako imamo enkoder
+        # Add string predictions if we have an encoder
         if type_encoder is not None:
             data['type_pred_str'] = type_encoder.inverse_transform(type_preds)
             data['type_true_str'] = type_encoder.inverse_transform(type_labels)
         
-        # WDL string predikcije
+        # WDL string predictions
         wdl_map = {0: 'Loss', 1: 'Draw', 2: 'Win'}
         data['wdl_pred_str'] = [wdl_map[p] for p in wdl_preds]
         data['wdl_true_str'] = [wdl_map[l] for l in wdl_labels]
@@ -287,12 +283,12 @@ class ChessEndgameEvaluator:
         save_path: str = "confusion_matrices.png"
     ):
         """
-        Prikazuje confusion matrice.
+        Shows confusion matrices.
         
         Args:
-            data_loader: DataLoader za evaluaciju
-            type_encoder: Enkoder za tip završnice
-            save_path: Putanja za čuvanje
+            data_loader: DataLoader for evaluation
+            type_encoder: Encoder for endgame type
+            save_path: Path to save the confusion matrices image
         """
         print("Creating confusion matrices...")
         
@@ -302,7 +298,7 @@ class ChessEndgameEvaluator:
         all_wdl_labels = []
         
         with torch.no_grad():
-            for batch_idx, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(data_loader):
+            for _, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(data_loader):
                 tensors = tensors.to(self.device)
                 type_labels_batch = type_labels_batch.to(self.device)
                 wdl_labels_batch = wdl_labels_batch.to(self.device)
@@ -389,19 +385,19 @@ class ChessEndgameEvaluator:
         top_k: int = 5
     ):
         """
-        Analizira greške modela.
+        Analyze errors in model predictions.
         
         Args:
-            data_loader: DataLoader za evaluaciju
-            type_encoder: Enkoder za tip završnice
-            top_k: Broj najčešćih grešaka za prikaz
+            data_loader: DataLoader for evaluation
+            type_encoder: Encoder for endgame type
+            top_k: Number of most common errors to display
         """
         print("Analyzing errors...")
         
         errors = []
         
         with torch.no_grad():
-            for batch_idx, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(data_loader):
+            for _, (tensors, type_labels_batch, wdl_labels_batch) in enumerate(data_loader):
                 tensors = tensors.to(self.device)
                 type_labels_batch = type_labels_batch.to(self.device)
                 wdl_labels_batch = wdl_labels_batch.to(self.device)
@@ -411,11 +407,11 @@ class ChessEndgameEvaluator:
                 type_preds = type_logits.argmax(dim=1)
                 wdl_preds = wdl_logits.argmax(dim=1)
                 
-                # Pronađi greške
+                # Find errors
                 type_errors = type_preds != type_labels_batch
                 wdl_errors = wdl_preds != wdl_labels_batch
                 
-                # Sačuvaj greške
+                # Save error details
                 for i in range(len(type_labels_batch)):
                     if type_errors[i] or wdl_errors[i]:
                         error = {
@@ -428,7 +424,7 @@ class ChessEndgameEvaluator:
                         }
                         errors.append(error)
         
-        # Analiziraj greške
+        # Analyze error
         if errors:
             print(f"\nTotal errors: {len(errors)}")
             
@@ -468,55 +464,3 @@ class ChessEndgameEvaluator:
                     true_str = wdl_map[true_label]
                     pred_str = wdl_map[pred_label]
                     print(f"  {true_str} -> {pred_str}: {count} times")
-
-
-# Test funkcija
-if __name__ == "__main__":
-    print("Testing evaluator...")
-    
-    # Test sa malim dataset-om
-    from dataset import create_data_loaders
-    from model import create_model
-    
-    # Kreiraj DataLoadere
-    train_loader, val_loader, test_loader, dataset = create_data_loaders(
-        csv_path="data/generated_data.csv",
-        batch_size=16,
-        max_samples=1000,  # Test sa malim brojem
-        num_workers=0
-    )
-    
-    # Kreiraj model
-    model, loss_fn = create_model(
-        num_type_classes=len(dataset.type_encoder.classes_),
-        num_wdl_classes=3,
-        input_channels=12,
-        device="cpu"
-    )
-    
-    # Kreiraj evaluator
-    evaluator = ChessEndgameEvaluator(model, device="cpu")
-    
-    # Evaluacija
-    metrics = evaluator.evaluate(
-        data_loader=test_loader,
-        type_encoder=dataset.type_encoder,
-        save_predictions=True,
-        save_path="test_predictions.csv"
-    )
-    
-    # Confusion matrice
-    evaluator.plot_confusion_matrices(
-        data_loader=test_loader,
-        type_encoder=dataset.type_encoder,
-        save_path="test_confusion_matrices.png"
-    )
-    
-    # Analiza grešaka
-    evaluator.analyze_errors(
-        data_loader=test_loader,
-        type_encoder=dataset.type_encoder,
-        top_k=5
-    )
-    
-    print("✅ Evaluator works correctly!")

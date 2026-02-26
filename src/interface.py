@@ -1,41 +1,40 @@
 """
-Jednostavan CLI interfejs za testiranje šahovskog endgame modela.
+Simple CLI interface for testing the chess endgame model.
 """
 
 import torch
 import argparse
 import sys
 import os
-from typing import Optional, Tuple
+from typing import Tuple
 import json
 
-# Dodaj src u path
+# Add src to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from model import ChessEndgameModel, ChessEndgameLoss
-from dataset import ChessEndgameDataset
+from model import ChessEndgameModel
 from fen_to_tensor import fen_to_tensor, add_turn_channel
 import chess
 
 
 class ChessEndgameInterface:
     """
-    CLI interfejs za šahovski endgame model.
+    CLI interface for chess endgame classification model.
     """
     
     def __init__(self, model_path: str, encoders_path: str, device: str = "cpu"):
         """
         Args:
-            model_path: Putanja do modela
-            encoders_path: Putanja do enkodera
-            device: Device za model
+            model_path: Path to the model
+            encoders_path: Path to the encoders
+            device: Device for the model
         """
         self.device = device
         
-        # Učitaj enkodere
+        # Load encoders
         self.encoders = self._load_encoders(encoders_path)
         
-        # Kreiraj model
+        # Create model
         self.model = self._load_model(model_path)
         
         print(f"Model loaded from {model_path}")
@@ -44,7 +43,7 @@ class ChessEndgameInterface:
         print(f"Number of WDL classes: {self.encoders['num_wdl_classes']}")
     
     def _load_encoders(self, encoders_path: str) -> dict:
-        """Učitava enkodere."""
+        """Loads encoders."""
         import pickle
         
         with open(encoders_path, 'rb') as f:
@@ -53,7 +52,7 @@ class ChessEndgameInterface:
         return encoders
     
     def _load_model(self, model_path: str) -> ChessEndgameModel:
-        """Učitava model."""
+        """Loads model."""
         model = ChessEndgameModel(
             input_channels=13,  # 12 + 1 turn channel
             num_type_classes=self.encoders['num_type_classes'],
@@ -68,48 +67,48 @@ class ChessEndgameInterface:
     
     def predict(self, fen: str) -> Tuple[str, str, dict]:
         """
-        Predikcija za FEN poziciju.
+        Predicts endgame type and outcome for a given FEN string.
         
         Args:
-            fen: FEN string pozicije
+            fen: FEN string of position
         
         Returns:
             Tuple[str, str, dict]:
-                - type_prediction: Predikcija tipa završnice
-                - wdl_prediction: Predikcija ishoda
-                - probabilities: Verovatnoće
+                - type_prediction: Prediction of endgame type
+                - wdl_prediction: Prediction of outcome (WDL)
+                - probabilities: Probabilities
         """
         try:
-            # Validiraj FEN
+            # Validate FEN
             board = chess.Board(fen)
             
-            # Konvertuj u tensor
+            # Convert to tensor
             tensor = fen_to_tensor(fen, normalize=True)
             tensor = add_turn_channel(tensor, board.turn)
             
-            # Konvertuj u PyTorch tensor i transponuj u (channels, height, width)
+            # Convert to PyTorch tensor and transpose to (channels, height, width)
             tensor = torch.tensor(tensor, dtype=torch.float32)
             tensor = tensor.permute(2, 0, 1)  # (height, width, channels) -> (channels, height, width)
-            tensor = tensor.unsqueeze(0)  # Dodaj batch dim: (1, channels, height, width)
+            tensor = tensor.unsqueeze(0)  # Add batch dim: (1, channels, height, width)
             tensor = tensor.to(self.device)
             
-            # Predikcija
+            # Prediction
             with torch.no_grad():
                 type_logits, wdl_logits = self.model(tensor)
                 
-                # Softmax za verovatnoće
+                # Softmax for probabilities
                 type_probs = torch.softmax(type_logits, dim=1)
                 wdl_probs = torch.softmax(wdl_logits, dim=1)
                 
-                # Predikcije
+                # Predictions
                 type_pred = type_logits.argmax(dim=1).item()
                 wdl_pred = wdl_logits.argmax(dim=1).item()
                 
-                # Konvertuj u string
+                # Convert to string
                 type_prediction = self.encoders['type_classes'][type_pred]
                 wdl_prediction = self._wdl_to_string(wdl_pred)
                 
-                # Verovatnoće
+                # Probabilities
                 probabilities = {
                     'type_probs': type_probs[0].cpu().numpy().tolist(),
                     'wdl_probs': wdl_probs[0].cpu().numpy().tolist(),
@@ -150,7 +149,7 @@ class ChessEndgameInterface:
         }
     
     def interactive_mode(self):
-        """Interaktivni režim."""
+        """Interactive mode."""
         print("\n" + "="*60)
         print("CHESS ENDGAME CLASSIFIER")
         print("="*60)
@@ -169,7 +168,7 @@ class ChessEndgameInterface:
                 if not fen:
                     continue
                 
-                # Predikcija
+                # Prediction
                 type_pred, wdl_pred, probs = self.predict(fen)
                 
                 # Show results
@@ -200,13 +199,13 @@ class ChessEndgameInterface:
     
     def batch_predict(self, fens: list) -> list:
         """
-        Batch predikcija za listu FEN pozicija.
+        Batch prediction for a list of FEN strings.
         
         Args:
-            fens: Lista FEN stringova
+            fens: List of FEN strings
         
         Returns:
-            list: Lista rezultata
+            list: List of prediction results
         """
         results = []
         
@@ -225,76 +224,13 @@ class ChessEndgameInterface:
     
     def save_predictions(self, results: list, output_path: str):
         """
-        Čuva predikcije u JSON fajl.
+        Saves predictions to a JSON file.
         
         Args:
-            results: Lista rezultata
-            output_path: Putanja za čuvanje
+            results: List of prediction results
+            output_path: Path to save the predictions
         """
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         
         print(f"Predictions saved to {output_path}")
-
-
-def main():
-    """Glavna funkcija."""
-    parser = argparse.ArgumentParser(description='Chess Endgame Classifier')
-    parser.add_argument('--model', required=True, help='Path to model')
-    parser.add_argument('--encoders', required=True, help='Path to encoders')
-    parser.add_argument('--device', default='cpu', help='Device (cpu/cuda)')
-    parser.add_argument('--fen', help='FEN position for prediction')
-    parser.add_argument('--batch', help='File with FEN positions (one per line)')
-    parser.add_argument('--output', help='Output file for batch predictions')
-    
-    args = parser.parse_args()
-    
-    # Kreiraj interfejs
-    interface = ChessEndgameInterface(
-        model_path=args.model,
-        encoders_path=args.encoders,
-        device=args.device
-    )
-    
-    if args.fen:
-        # Predikcija za jednu poziciju
-        type_pred, wdl_pred, probs = interface.predict(args.fen)
-        
-        print(f"FEN: {args.fen}")
-        print(f"Endgame type: {type_pred}")
-        print(f"Outcome: {wdl_pred}")
-        
-        if 'type_top5' in probs:
-            print("\nTop 5 predictions:")
-            for i, pred in enumerate(probs['type_top5'], 1):
-                print(f"  {i}. {pred['type']}: {pred['probability']:.3f}")
-        
-        if 'wdl_all' in probs:
-            print("\nWDL probabilities:")
-            for outcome, prob in probs['wdl_all'].items():
-                print(f"  {outcome}: {prob:.3f}")
-    
-    elif args.batch:
-        # Batch predikcija
-        with open(args.batch, 'r') as f:
-            fens = [line.strip() for line in f if line.strip()]
-        
-        results = interface.batch_predict(fens)
-        
-        if args.output:
-            interface.save_predictions(results, args.output)
-        else:
-            # Prikaži rezultate
-            for result in results:
-                print(f"FEN: {result['fen']}")
-                print(f"Type: {result['type_prediction']}")
-                print(f"Prediction: {result['wdl_prediction']}")
-                print("-" * 40)
-    
-    else:
-        # Interaktivni režim
-        interface.interactive_mode()
-
-
-if __name__ == "__main__":
-    main()

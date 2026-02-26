@@ -25,11 +25,7 @@ PIECES = ['K', 'Q', 'R', 'B', 'N', 'P']
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def random_piece():
-    """Return a random chess piece symbol."""
-    return random.choice(PIECES)
-
-def random_square(used):
+def random_square(used) -> int:
     """
     Generate a random square number (0-63) that hasn't been used yet.
     Args:
@@ -43,11 +39,11 @@ def random_square(used):
     used.add(sq)
     return sq
 
-def random_endgame_position(max_pieces=MAX_PIECES_DEFAULT):
+def random_endgame_position(max_pieces=MAX_PIECES_DEFAULT) -> chess.Board:
     """
     Generate a random endgame position with specified maximum number of pieces.
     Args:
-        max_pieces (int): Maximum number of pieces on the board (default: 5)
+        max_pieces (int): Maximum number of pieces on the board (default: 6)
     Returns:
         chess.Board: Randomly generated chess board position
     """
@@ -71,7 +67,7 @@ def random_endgame_position(max_pieces=MAX_PIECES_DEFAULT):
     
     return board
 
-def validate_tablebase_directory():
+def validate_tablebase_directory() -> bool:
     """
     Validate that the tablebase directory exists and contains required files.
     Returns:
@@ -93,7 +89,7 @@ def validate_tablebase_directory():
     logger.info(f"Found {len(tablebase_files)} tablebase files")
     return True
 
-def generate_dataset(out_csv="data/generated_data.csv", n_samples=DEFAULT_SAMPLES, max_pieces=MAX_PIECES_DEFAULT):
+def generate_dataset(out_csv=os.path.join(PROJECT_ROOT, "..", "data","generated_data.csv"), n_samples=DEFAULT_SAMPLES, max_pieces=MAX_PIECES_DEFAULT):
     """
     Generate a dataset of random endgame positions with their tablebase evaluations.
     Ensures all positions are unique by checking FEN strings.
@@ -178,13 +174,13 @@ def generate_dataset(out_csv="data/generated_data.csv", n_samples=DEFAULT_SAMPLE
                 pbar.n = count
                 pbar.refresh()
             
-            logger.info(f"✅ Dataset generation completed!")
-            logger.info(f"   Generated: {count} unique positions")
-            logger.info(f"   Skipped: {skipped_count} positions")
-            logger.info(f"   Duplicates found: {duplicate_count} positions")
-            logger.info(f"   Total attempts: {total_attempts}")
-            logger.info(f"   Success rate: {count/total_attempts*100:.1f}%" if total_attempts > 0 else "0%")
-            logger.info(f"   Saved to: {out_csv}")
+            logger.info(f"Dataset generation completed!")
+            logger.info(f"Generated: {count} unique positions")
+            logger.info(f"Skipped: {skipped_count} positions")
+            logger.info(f"Duplicates found: {duplicate_count} positions")
+            logger.info(f"Total attempts: {total_attempts}")
+            logger.info(f"Success rate: {count/total_attempts*100:.1f}%" if total_attempts > 0 else "0%")
+            logger.info(f"Saved to: {out_csv}")
             
     except FileNotFoundError as e:
         logger.error(f"File not found: {e}")
@@ -195,6 +191,4 @@ def generate_dataset(out_csv="data/generated_data.csv", n_samples=DEFAULT_SAMPLE
 
 if __name__ == "__main__":
     # Generate dataset with default parameters
-    # Use os.path to create correct path relative to script location
-    output_path = os.path.join(PROJECT_ROOT, "..", "data", "generated_data.csv")
-    generate_dataset(out_csv=output_path, n_samples=DEFAULT_SAMPLES)
+    generate_dataset()

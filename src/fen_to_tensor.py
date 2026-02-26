@@ -4,9 +4,7 @@ Converts FEN string to 8x8x12 tensor for CNN/RNN model.
 """
 
 import numpy as np
-import torch
 import chess
-from typing import Tuple, Optional
 
 
 def fen_to_tensor(fen: str, normalize: bool = True) -> np.ndarray:
@@ -65,57 +63,6 @@ def fen_to_tensor(fen: str, normalize: bool = True) -> np.ndarray:
         return np.zeros((8, 8, 12), dtype=np.float32)
 
 
-def tensor_to_fen(tensor: np.ndarray) -> str:
-    """
-    Converts tensor back to FEN string (for debugging).
-    
-    Args:
-        tensor (np.ndarray): Tensor shape (8, 8, 12)
-    
-    Returns:
-        str: FEN string
-    """
-    board = chess.Board()
-    board.clear()
-    
-    piece_symbols = ['K', 'Q', 'R', 'B', 'N', 'P']
-    
-    for rank in range(8):
-        for file in range(8):
-            for channel in range(12):
-                if tensor[rank, file, channel] > 0.5:
-                    if channel < 6:  # white pieces
-                        piece_symbol = piece_symbols[channel]
-                    else:  # black pieces
-                        piece_symbol = piece_symbols[channel-6].lower()
-                    
-                    square = chess.square(file, 7-rank)
-                    piece = chess.Piece.from_symbol(piece_symbol)
-                    board.set_piece_at(square, piece)
-                    break
-    
-    return board.fen()
-
-
-def batch_fen_to_tensor(fen_list: list, normalize: bool = True) -> torch.Tensor:
-    """
-    Converts list of FEN strings to batch tensor.
-    
-    Args:
-        fen_list (list): List of FEN strings
-        normalize (bool): Whether to normalize positions
-    
-    Returns:
-        torch.Tensor: Batch tensor shape (batch_size, 8, 8, 12)
-    """
-    tensors = []
-    for fen in fen_list:
-        tensor = fen_to_tensor(fen, normalize)
-        tensors.append(tensor)
-    
-    return torch.tensor(np.stack(tensors), dtype=torch.float32)
-
-
 def add_turn_channel(tensor: np.ndarray, turn: bool) -> np.ndarray:
     """
     Adds channel for information about who is to move.
@@ -129,55 +76,3 @@ def add_turn_channel(tensor: np.ndarray, turn: bool) -> np.ndarray:
     """
     turn_channel = np.full((8, 8, 1), 1.0 if turn else 0.0, dtype=np.float32)
     return np.concatenate([tensor, turn_channel], axis=2)
-
-
-def visualize_tensor(tensor: np.ndarray, title: str = "Chess Position"):
-    """
-    Visualizes tensor as chess board.
-    
-    Args:
-        tensor (np.ndarray): Tensor shape (8, 8, 12)
-        title (str): Title for plot
-    """
-    import matplotlib.pyplot as plt
-    
-    fig, axes = plt.subplots(2, 6, figsize=(15, 5))
-    fig.suptitle(title)
-    
-    piece_names = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p']
-    
-    for i in range(12):
-        row = i // 6
-        col = i % 6
-        
-        axes[row, col].imshow(tensor[:, :, i], cmap='Reds')
-        axes[row, col].set_title(piece_names[i])
-        axes[row, col].set_xticks(range(8))
-        axes[row, col].set_yticks(range(8))
-        axes[row, col].set_xticklabels(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
-        axes[row, col].set_yticklabels(['8', '7', '6', '5', '4', '3', '2', '1'])
-    
-    plt.tight_layout()
-    plt.show()
-
-
-# Test function
-if __name__ == "__main__":
-    # Test with simple position
-    test_fen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1"  # K vs k
-    
-    print("Test FEN:", test_fen)
-    tensor = fen_to_tensor(test_fen)
-    print(f"Tensor shape: {tensor.shape}")
-    print(f"Tensor dtype: {tensor.dtype}")
-    
-    # Check if conversion is correct
-    reconstructed_fen = tensor_to_fen(tensor)
-    print("Reconstructed FEN:", reconstructed_fen)
-    
-    # Test batch conversion
-    batch_fens = [test_fen, "8/8/8/8/8/8/8/8 w - - 0 1"]  # empty board
-    batch_tensor = batch_fen_to_tensor(batch_fens)
-    print(f"Batch tensor shape: {batch_tensor.shape}")
-    
-    print("✅ FEN to tensor conversion works correctly!")
